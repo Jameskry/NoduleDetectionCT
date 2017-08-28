@@ -23,46 +23,45 @@ else:
 		raise ValueError('Argument not recognized. Has to be train, test or val')
 
 # Read data
-X = pd.read_pickle(mode + 'data')
-y = pd.read_pickle(mode + 'labels')
+X = pd.read_pickle('./data/'+mode + 'data.pickle')
+y = pd.read_pickle('./data/'+mode + 'labels.pickle')
 
 
-dataset_file = mode + 'datalabels.txt'
+dataset_file = './data/'+mode + 'datalabels.txt'
 
-filenames =\
-X.index.to_series().apply(lambda x:\
-	mode+ '/image_'+str(x)+'.jpg')
+filenames = X.index.to_series().apply(lambda x: './data/'+mode+ '/image_'+str(x)+'.jpg')
 
    
 filenames = filenames.values.astype(str)
 labels = y.values.astype(int)
-data = np.zeros(filenames.size,\
-                     dtype=[('var1', 'S36'), ('var2', int)])
-data['var1'] = filenames
-data['var2'] = labels
+data = np.zeros(filenames.size, dtype=[('col1', 'S36'), ('col2', int)])
 
-np.savetxt(dataset_file, data, fmt="%10s %d")
+data['col1'] = filenames
+data['col2'] = labels
 
-output = mode + 'dataset.h5'
+np.savetxt(dataset_file, data, fmt="%10s %d")#datapath to label map
 
-build_hdf5_image_dataset(dataset_file, image_shape = (50, 50, 1), \
+output = './data/'+mode + 'dataset.h5'
+
+build_hdf5_image_dataset(dataset_file, image_shape = (512, 512, 1),
  mode ='file', output_path = output, categorical_labels = True, normalize = True,
  grayscale = True)
 
 # Load HDF5 dataset
-h5f = h5py.File('../data/'+ mode+ 'dataset.h5', 'r')
+h5f = h5py.File('./data/'+ mode+ 'dataset.h5', 'r')
 X_images = h5f['X']
 Y_labels = h5f['Y'][:]
 
 print X_images.shape
-X_images = X_images[:,:,:].reshape([-1,50,50,1])
+X_images = X_images[:,:,:].reshape([-1,512,512,1])
 print X_images.shape
 h5f.close()
 
-h5f = h5py.File('../data/' + mode + '.h5', 'w')
+h5f = h5py.File('./data/' + mode + '.h5', 'w')
 h5f.create_dataset('X', data=X_images)
 h5f.create_dataset('Y', data=Y_labels)
 h5f.close()
+
 
 
 

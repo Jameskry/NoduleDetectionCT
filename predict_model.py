@@ -11,37 +11,14 @@ import pickle
 import pandas as pd 
 import numpy as np 
 import h5py
-from sklearn.metrics import roc_curve, auc, confusion_matrix
+from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score
 import itertools
 
 import matplotlib.pyplot as plt
 
-hdfs_file = '../data/test.h5'
+hdfs_file = './data/test.h5'
 
-def create_mosaic(image, nrows, ncols):
-  """
-  Tiles all the layers in nrows x ncols
-  Args:
-  ------
-  image = 3d numpy array of M * N * number of filters dimensions
-  nrows = integer representing number of images in a row
-  ncol = integer representing number of images in a column
 
-  returns formatted image
-  """
-
-  M = image.shape[1]
-  N = image.shape[2]
-
-  npad = ((0,0), (1,1), (1,1))
-  image = np.pad(image, pad_width = npad, mode = 'constant',\
-    constant_values = 0)
-  M += 2
-  N += 2
-  image = image.reshape(nrows, ncols, M, N)
-  image = np.transpose(image, (0,2,1,3))
-  image = image.reshape(M*nrows, N*ncols)
-  return image
 
 
 def format_image(image, num_images):
@@ -127,12 +104,13 @@ def get_predictions(X_test_images, Y_test_labels):
   convnet  = CNNModel()
   network = convnet.define_network(X_test_images)
   model = tflearn.DNN(network, tensorboard_verbose=0,\
-  		 checkpoint_path='nodule3-classifier.tfl.ckpt')
-  model.load("nodule3-classifier.tfl")
+  		 checkpoint_path='./dara/checkpoints/nodule-classifier.tfl.ckpt')
+  model.load("nodule-classifier.tfl")
 
   predictions = np.vstack(model.predict(X_test_images[:,:,:,:]))
   #label_predictions = np.vstack(model.predict_label(X_test_images[:,:,:,:]))
   score = model.evaluate(X_test_images, Y_test_labels)
+  print "score:"+str(score)
   label_predictions = np.zeros_like(predictions)
   label_predictions[np.arange(len(predictions)), predictions.argmax(1)] = 1
   return predictions, label_predictions
@@ -200,17 +178,22 @@ def plot_roc_curve(fpr, tpr, roc_auc):
 def main():
   X_test_images, Y_test_labels = load_images(hdfs_file)
 
-  predictions, label_predictions = \
-  get_predictions(X_test_images, Y_test_labels)
+  predictions, label_predictions = get_predictions(X_test_images, Y_test_labels)
+
 
   fpr, tpr, roc_auc = get_roc_curve(Y_test_labels, predictions)
-  plot_roc_curve(fpr, tpr, roc_auc)
+  #plot_roc_curve(fpr, tpr, roc_auc)
 
-  precision, recall, specificity, cm =\
-   get_metrics(Y_test_labels, label_predictions)
+  precision, recall, specificity, cm = get_metrics(Y_test_labels, label_predictions)
 
-  print precision, recall, specificity 
+  accuracy = accuracy_score(Y_test_labels,label_predictions)
+  print "accuracy: "+str(accuracy)
 
+  print precision, recall, specificity
+  print "precision: "+str(precision)
+  print "recall: "+str(recall)
+  print "specificity: "+str(specificity)
+'''
   # Plot non-normalized confusion matrix
   plt.figure()
   plot_confusion_matrix(cm, classes=['no-nodule', 'nodule'], \
@@ -228,7 +211,7 @@ def main():
   plot_predictions(TN_images, 'preds_tns')
   plot_predictions(FN_images, 'preds_fns')
   plot_predictions(FP_images, 'preds_fps')
-
+'''
 if __name__ == "__main__":
   main()
 

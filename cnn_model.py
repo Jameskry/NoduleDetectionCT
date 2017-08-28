@@ -73,7 +73,7 @@ class CNNModel(object):
 		activation = takes a string
 		regularizer = 'L1' or 'L2' or None
 		"""
-		self.network = conv_2d(self.network, num_filters,\
+		self.network = conv_2d(self.network, num_filters,
 		 filter_size, activation = activation_type, regularizer = regularizer, name = name)
 		return self.network
 
@@ -103,8 +103,7 @@ class CNNModel(object):
 		 num_units: an integer representing number of units in the layer
 
 		"""
-		self.network = fully_connected(self.network, num_units,\
-		 activation= activation_type, name = name)
+		self.network = fully_connected(self.network, num_units, activation= activation_type, name = name)
 		return self.network
 
 	def dropout_layer(self, name, prob = 0.5):
@@ -134,8 +133,8 @@ class CNNModel(object):
 
 		"""
 		inp_layer = self.input_layer(X_images, name = 'inpu1')
-		conv_layer_1 = self.convolution_layer(32, 5, 'conv1', 'relu', 'L2') # 50 filters, with size 3
-		mp_layer_1 = self.max_pooling_layer(2, 'mp1') # downsamples spatial size by 2
+		conv_layer_1 = self.convolution_layer(32, 5, 'conv1', 'relu', 'L2')
+		mp_layer_1 = self.max_pooling_layer(2, 'mp1')
 		conv_layer_2 = self.convolution_layer(64, 5, 'conv2', 'relu', 'L2')
 		conv_layer_3 = self.convolution_layer(64, 3, 'conv3', 'relu', 'L2')
 		mp_layer_2 = self.max_pooling_layer(2, 'mp2')
@@ -143,8 +142,7 @@ class CNNModel(object):
 		dropout_layer_1 = self.dropout_layer('dp1', 0.5)
 		softmax_layer  = self.fully_connected_layer(2, 'softmax', 'fl2')
 
-		self.network = regression(self.network, optimizer = 'adam',\
-		 loss = 'categorical_crossentropy', learning_rate = 0.001)
+		self.network = regression(self.network, optimizer = 'adam', loss = 'categorical_crossentropy', learning_rate = 0.001)
 		
 		if mode == 'testtrain':
 			return self.network
