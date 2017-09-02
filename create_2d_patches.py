@@ -2,7 +2,7 @@
 
 """
 Builds image data base as test, train, validatation datasets
-Run script as python create_images.py $mode
+Run script as python create_2d_patches.py $mode
 where mode can be 'test', 'train', 'val'
 
 """
@@ -122,12 +122,12 @@ def create_data(idx, outDir, X_data,  width = 50):
 
     scan.save_image(outfile, width)
 
-def do_test_train_split(filename):
+def do_test_train_split(csvfile):
     #test train splitting
-    candidates = pd.read_csv(filename)
+    candidates = pd.read_csv(csvfile)#cols are seriesuid, coordX, coordY, coordZ, class
 
-    positives = candidates[candidates['class']==1].index #pos candidates
-    negatives = candidates[candidates['class']==0].index #neg candidates
+    positives = candidates[candidates['class']==1].index #pos candidates index
+    negatives = candidates[candidates['class']==0].index #neg candidates index
 
     print 'positive candidates: '+str(len(positives))
     print 'negative candidates: ' + str(len(negatives))
@@ -136,10 +136,10 @@ def do_test_train_split(filename):
     np.random.seed(42)
     negative_sampled = np.random.choice(negatives, len(positives)*5, replace = False)
 
-    candidatesDf = candidates.iloc[list(positives)+list(negative_sampled)]
+    candidatesDf = candidates.iloc[list(positives)+list(negative_sampled)]#keep positives and sampled negative data only
 
-    X = candidatesDf.iloc[:,:-1]
-    y = candidatesDf.iloc[:,-1]
+    X = candidatesDf.iloc[:,:-1] #X contains all but last "class" column
+    y = candidatesDf.iloc[:,-1]#last "class" column is y
 
     print 'splitting into train test and val'
 
@@ -179,7 +179,7 @@ def main():
 
     print 'total '+mode+' data: '+str(len(X_data))
 
-    Parallel(n_jobs = 3)(delayed(create_data)(idx, outDir, X_data,100) for idx in X_data.index)#100 width patches
+    Parallel(n_jobs = 3)(delayed(create_data)(idx, outDir, X_data, 100) for idx in X_data.index)
 
 if __name__ == "__main__":
     main()
