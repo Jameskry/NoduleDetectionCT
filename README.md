@@ -1,10 +1,10 @@
-#Lung Nodule Detection in CT Scans Images#
+# Lung Nodule Detection in CT Scans Images#
 
 
 
 Dataset: https://luna16.grand-challenge.org
 
-###Which does what?###
+### Which does what?
 
 **create_2d_patches.py**: Creates 2D patches of specific size around nodule coordinates(World coordinates).
 
