@@ -2,44 +2,36 @@ import os
 import tensorflow as tf
 import numpy as np
 import h5py
+import scipy.misc
 from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score
 
 
-train_file = 'traindataset_5_10.h5'
-val_file = 'val5_10.h5'
+train_file = 'train.h5'
+val_file = 'val.h5'
 test_file = 'test.h5'
 
-data_dir = './data/'
-checkpoint_file = './checkpoints/model-600'
+patch_size = 140
+hdf5_dir = './data/patches/'+str(patch_size)+'/hdf5/'
+#checkpoint_file = './checkpoints/model-600'
+
 
 #data_dir = os.environ['SCRATCH']+'/Data/tamjid_data/'
-#checkpoint_file = os.environ['SCRATCH']+'/Data/aowal_data/project/cxr/models/resnet152/runs/1491968515-nodule-42/checkpoints/model-600'
+checkpoint_file = os.environ['SCRATCH']+'/Data/aowal_data/project/cxr/models/resnet152/runs/1491968515-nodule-42/checkpoints/model-600'
 
 learning_rate = 0.001
-batch_size = 3
-num_epochs = 3
+batch_size = 64
+num_epochs = 25
 image_size = 224
-evaluate_every = 2
+evaluate_every = 50
 
-def crop(images, cropped_image_size, random_crop = True):
-    if images.shape[2]>cropped_image_size:
-        sz1 = int(images.shape[2]//2)
-        sz2 = int(cropped_image_size//2)
-        if random_crop:
-            diff = sz1-sz2
-            (h, v) = (np.random.randint(-diff, diff+1), np.random.randint(-diff, diff+1))
-        else:
-            (h, v) = (0,0)
-        images = images[: ,(sz1-sz2+v):(sz1+sz2+v),(sz1-sz2+h):(sz1+sz2+h)]
-    return images
 
-def load_hdf5_data(filename, cropped_size, random_crop = True):
-    with h5py.File(data_dir+filename, 'r') as h5f:
-        X_train_images = h5f['X']
-        X_train_images = crop(X_train_images, cropped_size, random_crop)
-        Y_train_labels = h5f['Y'][()]
 
-    return X_train_images, Y_train_labels
+
+def load_data(filename):
+    with h5py.File(hdf5_dir+filename, 'r') as h5f:
+        X = np.array(h5f['X'])
+        Y = np.array(h5f['Y'])
+    return X,Y
 
 
 
@@ -97,6 +89,11 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             yield shuffled_data[start_index:end_index]
 
 
+def one_hot_encode(Y_data, n_classes):
+    Y_data = np.asarray(Y_data, dtype='int32')
+    Y = np.zeros((len(Y_data), n_classes))
+    Y[np.arange(len(Y_data)), Y_data] = 1.
+    return Y
 
 
 
@@ -130,9 +127,6 @@ with tf.Graph().as_default():
         loss = tf.get_default_graph().get_tensor_by_name('Mean:0')
 
         global_step = tf.get_default_graph().get_tensor_by_name('global_step:0')
-        #global_step = tf.Variable(0, trainable=False, name='global_step')
-
-
 
         classes = tf.argmax(input=logits, axis=1)
         correct_predictions = tf.equal(classes, tf.argmax(input_y, 1))
@@ -143,9 +137,11 @@ with tf.Graph().as_default():
 
         sess.run(tf.global_variables_initializer())
 
-        train_x_1d, train_y = load_hdf5_data(train_file, image_size, random_crop=True)
+        train_x_1d, train_y = load_data(train_file)
         train_x = make_2d_to_3d(train_x_1d)
 
+        print "train X shape: "+str(train_x.shape)
+        print "train Y shape: "+str(train_y.shape)
 
         batches = batch_iter(list(zip(train_x, train_y)), batch_size, num_epochs)
         # Training loop. For each batch...
@@ -156,9 +152,13 @@ with tf.Graph().as_default():
             print "Current step: "+str(cur_step)+" current loss: "+str(cur_loss)+ " current accuracy: " + str(cur_accuracy*100)
 
             if cur_step % evaluate_every == 0:
-                val_x_1d, val_y = load_hdf5_data(val_file, image_size, random_crop=True)
+                val_x_1d, val_y = load_data(val_file)
                 val_x = make_2d_to_3d(val_x_1d)
-                val_logits, val_prob, val_loss, val_accuracy,val_step, _ = sess.run([logits, prob, loss, accuracy,global_step, train_op],
+
+                print "val X shape: " + str(val_x.shape)
+                print "val Y shape: " + str(val_y.shape)
+
+                val_logits, val_prob, val_loss, val_accuracy,val_step = sess.run([logits, prob, loss, accuracy,global_step],
                                                                            {input_x: val_x, input_y: val_y})
 
                 label_predictions = np.zeros_like(val_logits)
@@ -169,6 +169,6 @@ with tf.Graph().as_default():
                 print "______________validation________________"
                 print " step: " + str(val_step) + " loss: " + str(
                     val_loss) + " accuracy: " + str(val_accuracy * 100)
-                print " precision: "+str(precision)+" recall:"+str(recall)+" TN:"+str(cm[0][0])+" TP:"+str(cm[1][1]) +"\n"
+                print "precision:"+str(precision)+" recall:"+str(recall)+" TN:"+str(cm[0][0])+" TP:"+str(cm[1][1]) +"\n"
 
 
